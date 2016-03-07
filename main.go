@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -29,10 +30,12 @@ type balence struct {
 func main() {
 	conf := loadConfigFile()
 	for _, element := range conf.Balencer {
-		element.run()
+		go element.run()
 	}
 	for _, element := range conf.Forwarder {
-		element.run()
+		go element.run()
+	}
+	for {
 	}
 }
 
@@ -62,8 +65,10 @@ func (b balence) run() {
 	perror(err, "Failed to listen on port "+b.Local)
 	for i := 0; ; i++ {
 		local, err := listen.Accept()
+
 		perror(err, "failed to accept")
 		remote, err := net.Dial(b.Protocol, b.Remote[i%len(b.Remote)])
+		fmt.Println(local.RemoteAddr(), "=>", remote.RemoteAddr())
 		perror(err, "could not connect to host "+b.Remote[i%len(b.Remote)])
 		go copy(remote, local)
 		go copy(local, remote)
@@ -73,6 +78,7 @@ func (b balence) run() {
 func copy(src net.Conn, dst net.Conn) {
 	defer src.Close()
 	defer dst.Close()
+
 	io.Copy(src, dst)
 }
 
