@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 type config struct {
 	Forwarder []forward
 	Balencer  []balence
+	Prethread int
 }
 
 type forward struct {
@@ -27,16 +29,23 @@ type balence struct {
 	Protocol string
 }
 
+type runner interface {
+	run()
+}
+
 func main() {
 	conf := loadConfigFile()
-	for _, element := range conf.Balencer {
-		go element.run()
+	for i := 0; i < conf.Prethread; i++ {
+		for _, element := range conf.Balencer {
+			go element.run()
+		}
+		for _, element := range conf.Forwarder {
+			go element.run()
+		}
 	}
-	for _, element := range conf.Forwarder {
-		go element.run()
-	}
-	for {
-	}
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print(">")
+	reader.ReadString('\n')
 }
 
 func loadConfigFile() config {

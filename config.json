@@ -1,7 +1,8 @@
 {
+  "Prethread" : 1,
   "Balencer" : [
     {
-      "Remote": ["bbc.com:80" , "asdf.com:80", "cnn.com:80", "yahoo.com:80"],
+      "Remote": ["bbc.co.uk:80" , "asdf.com:80", "cnn.com:80", "yahoo.com:80", "wikipedia.com:80", "cbc.ca:80"],
       "Local": ":80",
       "Protocol": "tcp"
     }
