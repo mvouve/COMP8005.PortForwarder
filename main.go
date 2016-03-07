@@ -62,10 +62,7 @@ func (f forward) run() {
 	listen, err := net.Listen(f.Protocol, f.Local)
 	perror(err, "Failed to listen on port "+f.Local)
 	for {
-		dst, _ := net.Dial(f.Protocol, f.Remote)
-		src, _ := listen.Accept()
-		go copy(dst, src)
-		go copy(src, dst)
+		tunnel(listen, f.Remote, f.Protocol)
 	}
 }
 
@@ -73,15 +70,17 @@ func (b balence) run() {
 	listen, err := net.Listen(b.Protocol, b.Local)
 	perror(err, "Failed to listen on port "+b.Local)
 	for i := 0; ; i++ {
-		local, err := listen.Accept()
-
-		perror(err, "failed to accept")
-		remote, err := net.Dial(b.Protocol, b.Remote[i%len(b.Remote)])
-		fmt.Println(local.RemoteAddr(), "=>", remote.RemoteAddr())
-		perror(err, "could not connect to host "+b.Remote[i%len(b.Remote)])
-		go copy(remote, local)
-		go copy(local, remote)
+		tunnel(listen, b.Remote[i%len(b.Remote)], b.Protocol)
 	}
+}
+
+func tunnel(listen net.Listener, remoteStr string, proto string) {
+	local, err := listen.Accept()
+	perror(err, "failed to accept")
+	remote, err := net.Dial(proto, remoteStr)
+	perror(err, "could not connect to host "+remoteStr)
+	go copy(remote, local)
+	go copy(local, remote)
 }
 
 func copy(src net.Conn, dst net.Conn) {
