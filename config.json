@@ -1,0 +1,16 @@
+{
+  "Balencer" : [
+    {
+      "Remote": ["bbc.com:80" , "asdf.com:80"],
+      "Local": ":80",
+      "Protocol": "tcp"
+    }
+  ],
+  "Forwarder" : [
+    {
+      "Remote" : "cbc.ca:80",
+      "Local" : ":88",
+      "Protocol" : "tcp"
+    }
+  ]
+}
