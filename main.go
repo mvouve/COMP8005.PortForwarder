@@ -9,38 +9,38 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
 type config struct {
-	Forwarder []forward
 	Balencer  []balence
 	Prethread int
 }
 
-type forward struct {
-	Remote   string
-	Local    string
-	Protocol string
+type worker interface {
+	run()
+	stop()
 }
 
 type balence struct {
 	Remote   []string
 	Local    string
 	Protocol string
+	stopper  chan bool
 }
 
-type runner interface {
-	run()
+type pageCache struct {
+	Data   []byte
+	Host   string
+	Proto  string
+	Expiry time.Time
 }
 
 func main() {
 	conf := loadConfigFile()
 	for i := 0; i < conf.Prethread; i++ {
 		for _, element := range conf.Balencer {
-			go element.run()
-		}
-		for _, element := range conf.Forwarder {
-			go element.run()
+			go element.Run()
 		}
 	}
 	reader := bufio.NewReader(os.Stdin)
@@ -58,29 +58,45 @@ func loadConfigFile() config {
 	return conf
 }
 
-func (f forward) run() {
-	listen, err := net.Listen(f.Protocol, f.Local)
-	perror(err, "Failed to listen on port "+f.Local)
-	for {
-		tunnel(listen, f.Remote, f.Protocol)
-	}
+func (b *balence) Run() {
+	b.stopper = make(chan bool)
+	go b.run()
 }
 
 func (b balence) run() {
 	listen, err := net.Listen(b.Protocol, b.Local)
+	defer listen.Close()
+	acceptChan := make(chan net.Conn)
 	perror(err, "Failed to listen on port "+b.Local)
 	for i := 0; ; i++ {
-		tunnel(listen, b.Remote[i%len(b.Remote)], b.Protocol)
+		go accept(listen, acceptChan)
+		select {
+		case _ = <-b.stopper:
+			return
+		case connect := <-acceptChan:
+			go tunnel(connect, b.Remote[i%len(b.Remote)], b.Protocol)
+			go accept(listen, acceptChan)
+		}
+
 	}
 }
 
-func tunnel(listen net.Listener, remoteStr string, proto string) {
+func (b balence) Stop() {
+	b.stopper <- true
+}
+
+func accept(listen net.Listener, conChan chan net.Conn) {
 	local, err := listen.Accept()
 	perror(err, "failed to accept")
+
+	conChan <- local
+}
+
+func tunnel(incoming net.Conn, remoteStr string, proto string) {
 	remote, err := net.Dial(proto, remoteStr)
 	perror(err, "could not connect to host "+remoteStr)
-	go copy(remote, local)
-	go copy(local, remote)
+	go copy(remote, incoming)
+	go copy(incoming, remote)
 }
 
 func copy(src net.Conn, dst net.Conn) {
@@ -93,5 +109,11 @@ func copy(src net.Conn, dst net.Conn) {
 func perror(err error, str string) {
 	if err != nil {
 		log.Println(str+":", err)
+	}
+}
+
+func ferror(err error, str string) {
+	if err != nil {
+		log.Fatalln(str+":", err)
 	}
 }
