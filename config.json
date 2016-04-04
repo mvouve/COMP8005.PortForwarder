@@ -3,15 +3,8 @@
   "Balencer" : [
     {
       "Remote": ["bbc.co.uk:80" , "asdf.com:80", "cnn.com:80", "yahoo.com:80", "wikipedia.com:80", "cbc.ca:80"],
-      "Local": ":80",
+      "Local": ":8888",
       "Protocol": "tcp"
-    }
-  ],
-  "Forwarder" : [
-    {
-      "Remote" : "google.com:443",
-      "Local" : ":443",
-      "Protocol" : "tcp"
     }
   ]
 }
